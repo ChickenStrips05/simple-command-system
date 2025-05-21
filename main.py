@@ -20,19 +20,11 @@ def run_command(path, data):
 
 try:
     while True:
-        cmd_input = input(">>> ")
-        
-        class Command:
-            def __init__(self, content):
-                self.content = content
-                self.channel = "default-channel"
+        command = input(">>> ")
 
-        command = Command(cmd_input)
+        if not command.startswith(settings["prefix"]): continue
 
-        if not command.content.startswith(settings["prefix"]): continue
-
-        text = command.content
-        channel = command.channel
+        text = command
         commands = getAllCommands()
 
         for command_text in text.split("|"):
@@ -44,9 +36,6 @@ try:
             if path:
                 class data:
                     Command = command
-                    Text = text
-                    Channel = channel
-                    Commands = commands
                     Args = args
                 try:
                     run_command(path, data)
@@ -63,7 +52,7 @@ except Exception as e:
 """
 Command errors:
     Error 1 - internal code error,
-    something like an exeption or malfunction
+    something like an exception or a malfunction
 
     Error 2 - argument error,
     not enough, too many, or wrong types. 
