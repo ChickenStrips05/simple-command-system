@@ -1,49 +1,58 @@
-import json, importlib.util, sys
-from pathlib import Path
-from utils import parser
+import json, sys
+import utils.command_utils as utils
+
 sys.dont_write_bytecode = True #this way it wont create a compiled module
 
 with open("settings.json", "r") as f:
     settings = json.load(f)
+debug = settings["debug"]
 
-def getAllCommands():
-    return {file.stem: str(file) for file in Path("commands/").rglob("*.py") if file.is_file()}
+command_registry = []
 
-def runCommand(path, data):
-    spec = importlib.util.spec_from_file_location("mod", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    if hasattr(mod, "main"):
-        mod.main(data)
-    else:
-        print(f"No main() in {path}")
+def register_command(name, func, help, aliases=None):
+    command_registry.append({"name": name,"func": func,"help": help,"aliases": aliases or []})
+    
+    if debug: print("registered", name, "command.", "Aliases:", aliases or [])
+
+runCommand = utils.runCommand
+
+
+def init():
+    class payload:
+        RegisterFunc = register_command
+    
+    for _, path in utils.getAllCommands().items():
+        runCommand(path,"init",payload)
+
+init()
+
 
 def rep():
     command = input(">>> ")
 
-    if not command.startswith(settings["prefix"]): return
+    if not command.startswith(settings["prefix"]):
+        return
 
     text = command
-    commands = getAllCommands()
 
     for commandText in text.split("|"):
-        args = parser.parse_args(commandText)
+        args = utils.parse_args(commandText)
 
         name = args[0][len(settings["prefix"]):]
-        path = commands.get(name)
-        
-        if path:
-            class data:
-                Command = command
-                Args = args
-            
+
+        class payload:
+            Command = commandText
+            Args = args[1:]
+            Registry = command_registry
+
+        match = utils.searchCommand(command_registry,name)
+
+        if match:
             try:
-                runCommand(path, data)
-                
+                match["func"](payload)
             except KeyboardInterrupt:
-                print("force-exiting command")
+                print("Force-exiting command.")
                 return
-                    
         else:
             print("Unknown command.")
 
@@ -53,8 +62,8 @@ while True:
     except KeyboardInterrupt:
         print("\nClosing")
         sys.exit()
-    except Exception as e:
-        print("Error:",e)
+    #except Exception as e:
+    #    print("Error:",e)
 
 
 """
