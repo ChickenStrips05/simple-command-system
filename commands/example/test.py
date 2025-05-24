@@ -7,4 +7,4 @@ def help(data):
     return "testing command","Testing command - returns 'Hello!'"
 
 def init(data):
-    register_command("test",main,help)
+    register_command(name="test",func=main,help=help,aliases=["testing"])
